@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Center.Production.Configuration;
 using Center.Production.EntityFrameworkCore;
-using Center.Production.Identity;
 using Center.Production.MultiTenancy;
 using Center.Production.Web.Areas.AppAreaName.Startup;
 

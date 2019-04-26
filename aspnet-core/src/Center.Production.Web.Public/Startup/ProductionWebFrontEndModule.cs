@@ -16,10 +16,10 @@ namespace Center.Production.Web.Public.Startup
     {
         private readonly IConfigurationRoot _appConfiguration;
 
-        public ProductionWebFrontEndModule(IHostingEnvironment env, ProductionEntityFrameworkCoreModule ProductionEntityFrameworkCoreModule)
+        public ProductionWebFrontEndModule(IHostingEnvironment env, ProductionEntityFrameworkCoreModule productionEntityFrameworkCoreModule)
         {
             _appConfiguration = env.GetAppConfiguration();
-            ProductionEntityFrameworkCoreModule.SkipDbSeed = true;
+            productionEntityFrameworkCoreModule.SkipDbSeed = true;
         }
 
         public override void PreInitialize()

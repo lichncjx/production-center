@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Abp.AspNetZeroCore;
 using Abp.AspNetZeroCore.Web.Authentication.External;
 using Abp.AspNetZeroCore.Web.Authentication.External.Facebook;
@@ -14,18 +8,14 @@ using Abp.AspNetZeroCore.Web.Authentication.External.OpenIdConnect;
 using Abp.AspNetZeroCore.Web.Authentication.External.WsFederation;
 using Abp.Configuration.Startup;
 using Abp.Dependency;
-using Abp.Extensions;
 using Abp.Modules;
 using Abp.Reflection.Extensions;
 using Abp.Threading.BackgroundWorkers;
-using Abp.Timing;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Center.Production.Configuration;
 using Center.Production.EntityFrameworkCore;
 using Center.Production.MultiTenancy;
-using Newtonsoft.Json.Linq;
 
 namespace Center.Production.Web.Startup
 {
@@ -34,13 +24,11 @@ namespace Center.Production.Web.Startup
     )]
     public class ProductionWebHostModule : AbpModule
     {
-        private readonly IHostingEnvironment _env;
         private readonly IConfigurationRoot _appConfiguration;
 
         public ProductionWebHostModule(
             IHostingEnvironment env)
         {
-            _env = env;
             _appConfiguration = env.GetAppConfiguration();
         }
 
