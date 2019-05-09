@@ -1,6 +1,6 @@
 ﻿import { UtilsService } from '@abp/utils/utils.service';
 import { CompilerOptions, NgModuleRef, Type } from '@angular/core';
-import { CenterBrowserDynamic } from '@angular/Center-browser-dynamic';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 import { AppAuthService } from '@app/shared/common/auth/app-auth.service';
 import { AppConsts } from '@shared/AppConsts';
 import { SubdomainTenancyNameFinder } from '@shared/helpers/SubdomainTenancyNameFinder';
@@ -13,8 +13,12 @@ import { environment } from './environments/environment';
 import { LocaleMappingService } from '@shared/locale-mapping.service';
 
 export class AppPreBootstrap {
-
-    static run(appRootUrl: string, callback: () => void, resolve: any, reject: any): void {
+    static run(
+        appRootUrl: string,
+        callback: () => void,
+        resolve: any,
+        reject: any
+    ): void {
         AppPreBootstrap.getApplicationConfig(appRootUrl, () => {
             if (UrlHelper.isInstallUrl(location.href)) {
                 AppPreBootstrap.loadAssetsForInstallPage(callback);
@@ -23,56 +27,98 @@ export class AppPreBootstrap {
 
             const queryStringObj = UrlHelper.getQueryParameters();
 
-            if (queryStringObj.redirect && queryStringObj.redirect === 'TenantRegistration') {
+            if (
+                queryStringObj.redirect &&
+                queryStringObj.redirect === 'TenantRegistration'
+            ) {
                 if (queryStringObj.forceNewRegistration) {
                     new AppAuthService().logout();
                 }
 
-                location.href = AppConsts.appBaseUrl + '/account/select-edition';
+                location.href =
+                    AppConsts.appBaseUrl + '/account/select-edition';
             } else if (queryStringObj.impersonationToken) {
-                AppPreBootstrap.impersonatedAuthenticate(queryStringObj.impersonationToken, queryStringObj.tenantId, () => { AppPreBootstrap.getUserConfiguration(callback); });
+                AppPreBootstrap.impersonatedAuthenticate(
+                    queryStringObj.impersonationToken,
+                    queryStringObj.tenantId,
+                    () => {
+                        AppPreBootstrap.getUserConfiguration(callback);
+                    }
+                );
             } else if (queryStringObj.switchAccountToken) {
-                AppPreBootstrap.linkedAccountAuthenticate(queryStringObj.switchAccountToken, queryStringObj.tenantId, () => { AppPreBootstrap.getUserConfiguration(callback); });
+                AppPreBootstrap.linkedAccountAuthenticate(
+                    queryStringObj.switchAccountToken,
+                    queryStringObj.tenantId,
+                    () => {
+                        AppPreBootstrap.getUserConfiguration(callback);
+                    }
+                );
             } else {
                 AppPreBootstrap.getUserConfiguration(callback);
             }
         });
     }
 
-    static bootstrap<TM>(moduleType: Type<TM>, compilerOptions?: CompilerOptions | CompilerOptions[]): Promise<NgModuleRef<TM>> {
-        return CenterBrowserDynamic().bootstrapModule(moduleType, compilerOptions);
+    static bootstrap<TM>(
+        moduleType: Type<TM>,
+        compilerOptions?: CompilerOptions | CompilerOptions[]
+    ): Promise<NgModuleRef<TM>> {
+        return platformBrowserDynamic().bootstrapModule(
+            moduleType,
+            compilerOptions
+        );
     }
 
-    private static getApplicationConfig(appRootUrl: string, callback: () => void) {
+    private static getApplicationConfig(
+        appRootUrl: string,
+        callback: () => void
+    ) {
         let type = 'GET';
         let url = appRootUrl + 'assets/' + environment.appConfig;
         let customHeaders = [
             {
                 name: 'Abp.TenantId',
                 value: abp.multiTenancy.getTenantIdCookie() + ''
-            }];
+            }
+        ];
 
-        XmlHttpRequestHelper.ajax(type, url, customHeaders, null, (result) => {
+        XmlHttpRequestHelper.ajax(type, url, customHeaders, null, result => {
             const subdomainTenancyNameFinder = new SubdomainTenancyNameFinder();
-            const tenancyName = subdomainTenancyNameFinder.getCurrentTenancyNameOrNull(result.appBaseUrl);
+            const tenancyName = subdomainTenancyNameFinder.getCurrentTenancyNameOrNull(
+                result.appBaseUrl
+            );
 
             AppConsts.appBaseUrlFormat = result.appBaseUrl;
             AppConsts.remoteServiceBaseUrlFormat = result.remoteServiceBaseUrl;
             AppConsts.localeMappings = result.localeMappings;
 
             if (tenancyName == null) {
-                AppConsts.appBaseUrl = result.appBaseUrl.replace(AppConsts.tenancyNamePlaceHolderInUrl + '.', '');
-                AppConsts.remoteServiceBaseUrl = result.remoteServiceBaseUrl.replace(AppConsts.tenancyNamePlaceHolderInUrl + '.', '');
+                AppConsts.appBaseUrl = result.appBaseUrl.replace(
+                    AppConsts.tenancyNamePlaceHolderInUrl + '.',
+                    ''
+                );
+                AppConsts.remoteServiceBaseUrl = result.remoteServiceBaseUrl.replace(
+                    AppConsts.tenancyNamePlaceHolderInUrl + '.',
+                    ''
+                );
             } else {
-                AppConsts.appBaseUrl = result.appBaseUrl.replace(AppConsts.tenancyNamePlaceHolderInUrl, tenancyName);
-                AppConsts.remoteServiceBaseUrl = result.remoteServiceBaseUrl.replace(AppConsts.tenancyNamePlaceHolderInUrl, tenancyName);
+                AppConsts.appBaseUrl = result.appBaseUrl.replace(
+                    AppConsts.tenancyNamePlaceHolderInUrl,
+                    tenancyName
+                );
+                AppConsts.remoteServiceBaseUrl = result.remoteServiceBaseUrl.replace(
+                    AppConsts.tenancyNamePlaceHolderInUrl,
+                    tenancyName
+                );
             }
 
             callback();
         });
     }
 
-    private static getCurrentClockProvider(currentProviderName: string): abp.timing.IClockProvider {
+    private static getCurrentClockProvider(
+        currentProviderName: string
+    ): abp.timing.IClockProvider {
         if (currentProviderName === 'unspecifiedClockProvider') {
             return abp.timing.unspecifiedClockProvider;
         }
@@ -84,48 +130,70 @@ export class AppPreBootstrap {
         return abp.timing.localClockProvider;
     }
 
-    private static impersonatedAuthenticate(impersonationToken: string, tenantId: number, callback: () => void): void {
+    private static impersonatedAuthenticate(
+        impersonationToken: string,
+        tenantId: number,
+        callback: () => void
+    ): void {
         abp.multiTenancy.setTenantIdCookie(tenantId);
-        const cookieLangValue = abp.utils.getCookieValue('Abp.Localization.CultureName');
+        const cookieLangValue = abp.utils.getCookieValue(
+            'Abp.Localization.CultureName'
+        );
 
         let requestHeaders = {
-            '.AspNetCore.Culture': ('c=' + cookieLangValue + '|uic=' + cookieLangValue),
+            '.AspNetCore.Culture':
+                'c=' + cookieLangValue + '|uic=' + cookieLangValue,
             'Abp.TenantId': abp.multiTenancy.getTenantIdCookie()
         };
 
         XmlHttpRequestHelper.ajax(
             'POST',
-            AppConsts.remoteServiceBaseUrl + '/api/TokenAuth/ImpersonatedAuthenticate?impersonationToken=' + impersonationToken,
+            AppConsts.remoteServiceBaseUrl +
+                '/api/TokenAuth/ImpersonatedAuthenticate?impersonationToken=' +
+                impersonationToken,
             requestHeaders,
             null,
-            (response) => {
+            response => {
                 let result = response.result;
                 abp.auth.setToken(result.accessToken);
-                AppPreBootstrap.setEncryptedTokenCookie(result.encryptedAccessToken);
+                AppPreBootstrap.setEncryptedTokenCookie(
+                    result.encryptedAccessToken
+                );
                 location.search = '';
                 callback();
             }
         );
     }
 
-    private static linkedAccountAuthenticate(switchAccountToken: string, tenantId: number, callback: () => void): void {
+    private static linkedAccountAuthenticate(
+        switchAccountToken: string,
+        tenantId: number,
+        callback: () => void
+    ): void {
         abp.multiTenancy.setTenantIdCookie(tenantId);
-        const cookieLangValue = abp.utils.getCookieValue('Abp.Localization.CultureName');
+        const cookieLangValue = abp.utils.getCookieValue(
+            'Abp.Localization.CultureName'
+        );
 
         let requestHeaders = {
-            '.AspNetCore.Culture': ('c=' + cookieLangValue + '|uic=' + cookieLangValue),
+            '.AspNetCore.Culture':
+                'c=' + cookieLangValue + '|uic=' + cookieLangValue,
             'Abp.TenantId': abp.multiTenancy.getTenantIdCookie()
         };
 
         XmlHttpRequestHelper.ajax(
             'POST',
-            AppConsts.remoteServiceBaseUrl + '/api/TokenAuth/LinkedAccountAuthenticate?switchAccountToken=' + switchAccountToken,
+            AppConsts.remoteServiceBaseUrl +
+                '/api/TokenAuth/LinkedAccountAuthenticate?switchAccountToken=' +
+                switchAccountToken,
             requestHeaders,
             null,
-            (response) => {
+            response => {
                 let result = response.result;
                 abp.auth.setToken(result.accessToken);
-                AppPreBootstrap.setEncryptedTokenCookie(result.encryptedAccessToken);
+                AppPreBootstrap.setEncryptedTokenCookie(
+                    result.encryptedAccessToken
+                );
                 location.search = '';
                 callback();
             }
@@ -133,11 +201,14 @@ export class AppPreBootstrap {
     }
 
     private static getUserConfiguration(callback: () => void): any {
-        const cookieLangValue = abp.utils.getCookieValue('Abp.Localization.CultureName');
+        const cookieLangValue = abp.utils.getCookieValue(
+            'Abp.Localization.CultureName'
+        );
         const token = abp.auth.getToken();
 
         let requestHeaders = {
-            '.AspNetCore.Culture': ('c=' + cookieLangValue + '|uic=' + cookieLangValue),
+            '.AspNetCore.Culture':
+                'c=' + cookieLangValue + '|uic=' + cookieLangValue,
             'Abp.TenantId': abp.multiTenancy.getTenantIdCookie()
         };
 
@@ -145,32 +216,61 @@ export class AppPreBootstrap {
             requestHeaders['Authorization'] = 'Bearer ' + token;
         }
 
-        return XmlHttpRequestHelper.ajax('GET', AppConsts.remoteServiceBaseUrl + '/AbpUserConfiguration/GetAll', requestHeaders, null, (response) => {
-            let result = response.result;
+        return XmlHttpRequestHelper.ajax(
+            'GET',
+            AppConsts.remoteServiceBaseUrl + '/AbpUserConfiguration/GetAll',
+            requestHeaders,
+            null,
+            response => {
+                let result = response.result;
 
-            _.merge(abp, result);
+                _.merge(abp, result);
 
-            abp.clock.provider = this.getCurrentClockProvider(result.clock.provider);
+                abp.clock.provider = this.getCurrentClockProvider(
+                    result.clock.provider
+                );
 
-            moment.locale(new LocaleMappingService().map('moment', abp.localization.currentLanguage.name));
-            (window as any).moment.locale(new LocaleMappingService().map('moment', abp.localization.currentLanguage.name));
+                moment.locale(
+                    new LocaleMappingService().map(
+                        'moment',
+                        abp.localization.currentLanguage.name
+                    )
+                );
+                (window as any).moment.locale(
+                    new LocaleMappingService().map(
+                        'moment',
+                        abp.localization.currentLanguage.name
+                    )
+                );
 
-            if (abp.clock.provider.supportsMultipleTimezone) {
-                moment.tz.setDefault(abp.timing.timeZoneInfo.iana.timeZoneId);
-                (window as any).moment.tz.setDefault(abp.timing.timeZoneInfo.iana.timeZoneId);
+                if (abp.clock.provider.supportsMultipleTimezone) {
+                    moment.tz.setDefault(
+                        abp.timing.timeZoneInfo.iana.timeZoneId
+                    );
+                    (window as any).moment.tz.setDefault(
+                        abp.timing.timeZoneInfo.iana.timeZoneId
+                    );
+                }
+
+                abp.event.trigger('abp.dynamicScriptsInitialized');
+
+                AppConsts.recaptchaSiteKey = abp.setting.get(
+                    'Recaptcha.SiteKey'
+                );
+                AppConsts.subscriptionExpireNootifyDayCount = parseInt(
+                    abp.setting.get(
+                        'App.TenantManagement.SubscriptionExpireNotifyDayCount'
+                    )
+                );
+
+                DynamicResourcesHelper.loadResources(callback);
             }
-
-            abp.event.trigger('abp.dynamicScriptsInitialized');
-
-            AppConsts.recaptchaSiteKey = abp.setting.get('Recaptcha.SiteKey');
-            AppConsts.subscriptionExpireNootifyDayCount = parseInt(abp.setting.get('App.TenantManagement.SubscriptionExpireNotifyDayCount'));
-
-            DynamicResourcesHelper.loadResources(callback);
-        });
+        );
     }
 
     private static setEncryptedTokenCookie(encryptedToken: string) {
-        new UtilsService().setCookieValue(AppConsts.authorization.encrptedAuthTokenName,
+        new UtilsService().setCookieValue(
+            AppConsts.authorization.encrptedAuthTokenName,
             encryptedToken,
             new Date(new Date().getTime() + 365 * 86400000), //1 year
             abp.appPath

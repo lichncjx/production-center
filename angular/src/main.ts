@@ -1,5 +1,5 @@
 ﻿import { enableProdMode } from '@angular/core';
-import { CenterBrowserDynamic } from '@angular/Center-browser-dynamic';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 import 'moment-timezone';
 import 'moment/min/locales.min';
 import { environment } from './environments/environment';
@@ -12,7 +12,7 @@ if (environment.production) {
 }
 
 const bootstrap = () => {
-    return CenterBrowserDynamic().bootstrapModule(RootModule);
+    return platformBrowserDynamic().bootstrapModule(RootModule);
 };
 
 /* "Hot Module Replacement" is enabled as described on

@@ -1,9 +1,9 @@
 ﻿import { AbpModule } from '@abp/abp.module';
-import { CenterLocation, registerLocaleData } from '@angular/common';
+import { PlatformLocation, registerLocaleData } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { APP_INITIALIZER, Injector, LOCALE_ID, NgModule } from '@angular/core';
-import { BrowserModule } from '@angular/Center-browser';
-import { BrowserAnimationsModule } from '@angular/Center-browser/animations';
+import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AppAuthService } from '@app/shared/common/auth/app-auth.service';
 import { AppConsts } from '@shared/AppConsts';
 import { CommonModule } from '@shared/common/common.module';
@@ -35,36 +35,46 @@ import { LocaleMappingService } from '@shared/locale-mapping.service';
 
 export function appInitializerFactory(
     injector: Injector,
-    CenterLocation: CenterLocation) {
+    PlatformLocation: PlatformLocation
+) {
     return () => {
         abp.ui.setBusy();
 
         return new Promise<boolean>((resolve, reject) => {
-            AppConsts.appBaseHref = getBaseHref(CenterLocation);
+            AppConsts.appBaseHref = getBaseHref(PlatformLocation);
             let appBaseUrl = getDocumentOrigin() + AppConsts.appBaseHref;
 
-            AppPreBootstrap.run(appBaseUrl, () => {
-                handleLogoutRequest(injector.get(AppAuthService));
-                initializeLocalForage();
+            AppPreBootstrap.run(
+                appBaseUrl,
+                () => {
+                    handleLogoutRequest(injector.get(AppAuthService));
+                    initializeLocalForage();
 
-                if (UrlHelper.isInstallUrl(location.href)) {
-                    doConfigurationForInstallPage(injector);
-                    abp.ui.clearBusy();
-                    resolve(true);
-                } else {
-                    let appSessionService: AppSessionService = injector.get(AppSessionService);
-                    appSessionService.init().then((result) => {
-                        initializeAppCssClasses(injector, result);
-                        initializeTenantResources(injector);
-                        initializeCookieConsent(injector);
-                        registerLocales(resolve, reject);
-                    }, (err) => {
+                    if (UrlHelper.isInstallUrl(location.href)) {
+                        doConfigurationForInstallPage(injector);
                         abp.ui.clearBusy();
-                        reject(err);
-                    });
-                }
-
-            }, resolve, reject);
+                        resolve(true);
+                    } else {
+                        let appSessionService: AppSessionService = injector.get(
+                            AppSessionService
+                        );
+                        appSessionService.init().then(
+                            result => {
+                                initializeAppCssClasses(injector, result);
+                                initializeTenantResources(injector);
+                                initializeCookieConsent(injector);
+                                registerLocales(resolve, reject);
+                            },
+                            err => {
+                                abp.ui.clearBusy();
+                                reject(err);
+                            }
+                        );
+                    }
+                },
+                resolve,
+                reject
+            );
         });
     };
 }
@@ -92,12 +102,14 @@ function getDefaultThemeForInstallPage(): UiCustomizationSettingsDto {
     return theme;
 }
 
-function setApplicationInfoForInstallPage(injector, theme: UiCustomizationSettingsDto) {
+function setApplicationInfoForInstallPage(
+    injector,
+    theme: UiCustomizationSettingsDto
+) {
     let appSessionService: AppSessionService = injector.get(AppSessionService);
     appSessionService.theme = theme;
     appSessionService.application = new ApplicationInfoDto();
     appSessionService.application.releaseDate = moment().startOf('day');
-
 }
 
 function doConfigurationForInstallPage(injector) {
@@ -107,7 +119,10 @@ function doConfigurationForInstallPage(injector) {
     initializeAppCssClasses(injector, theme);
 }
 
-function initializeAppCssClasses(injector: Injector, theme: UiCustomizationSettingsDto) {
+function initializeAppCssClasses(
+    injector: Injector,
+    theme: UiCustomizationSettingsDto
+) {
     let appUiCustomizationService = injector.get(AppUiCustomizationService);
     appUiCustomizationService.init(theme);
 
@@ -135,57 +150,100 @@ function initializeTenantResources(injector: Injector) {
                 },
                 {
                     key: 'href',
-                    value: AppConsts.remoteServiceBaseUrl + '/TenantCustomization/GetCustomCss?id=' + appSessionService.tenant.customCssId
-                }])
+                    value:
+                        AppConsts.remoteServiceBaseUrl +
+                        '/TenantCustomization/GetCustomCss?id=' +
+                        appSessionService.tenant.customCssId
+                }
+            ])
         );
     }
 
-    let metaImage = DomHelper.getElementByAttributeValue('meta', 'property', 'og:image');
+    let metaImage = DomHelper.getElementByAttributeValue(
+        'meta',
+        'property',
+        'og:image'
+    );
     if (metaImage) {
         //set og share image meta tag
         if (!appSessionService.tenant || !appSessionService.tenant.logoId) {
-            let ui: AppUiCustomizationService = injector.get(AppUiCustomizationService);
-            metaImage.setAttribute('content', window.location.origin + '/assets/common/images/app-logo-on-' + abp.setting.get(appSessionService.theme.baseSettings.theme + '.' + 'App.UiManagement.Left.AsideSkin') + '.svg');
+            let ui: AppUiCustomizationService = injector.get(
+                AppUiCustomizationService
+            );
+            metaImage.setAttribute(
+                'content',
+                window.location.origin +
+                    '/assets/common/images/app-logo-on-' +
+                    abp.setting.get(
+                        appSessionService.theme.baseSettings.theme +
+                            '.' +
+                            'App.UiManagement.Left.AsideSkin'
+                    ) +
+                    '.svg'
+            );
         } else {
-            metaImage.setAttribute('content', AppConsts.remoteServiceBaseUrl + '/TenantCustomization/GetLogo?id=' + appSessionService.tenant.logoId);
+            metaImage.setAttribute(
+                'content',
+                AppConsts.remoteServiceBaseUrl +
+                    '/TenantCustomization/GetLogo?id=' +
+                    appSessionService.tenant.logoId
+            );
         }
     }
 }
 
 function initializeCookieConsent(injector: Injector) {
-    let cookieConsentService: CookieConsentService = injector.get(CookieConsentService);
+    let cookieConsentService: CookieConsentService = injector.get(
+        CookieConsentService
+    );
     cookieConsentService.init();
 }
 
 function getDocumentOrigin() {
     if (!document.location.origin) {
-        return document.location.protocol + '//' + document.location.hostname + (document.location.port ? ':' + document.location.port : '');
+        return (
+            document.location.protocol +
+            '//' +
+            document.location.hostname +
+            (document.location.port ? ':' + document.location.port : '')
+        );
     }
 
     return document.location.origin;
 }
 
-function registerLocales(resolve: (value?: boolean | Promise<boolean>) => void, reject: any) {
+function registerLocales(
+    resolve: (value?: boolean | Promise<boolean>) => void,
+    reject: any
+) {
     if (shouldLoadLocale()) {
-        let angularLocale = convertAbpLocaleToAngularLocale(abp.localization.currentLanguage.name);
-        import(`@angular/common/locales/${angularLocale}.js`)
-            .then(module => {
-                registerLocaleData(module.default);
-                NgxBootstrapDatePickerConfigService.registerNgxBootstrapDatePickerLocales().then(_ => {
+        let angularLocale = convertAbpLocaleToAngularLocale(
+            abp.localization.currentLanguage.name
+        );
+        import(`@angular/common/locales/${angularLocale}.js`).then(module => {
+            registerLocaleData(module.default);
+            NgxBootstrapDatePickerConfigService.registerNgxBootstrapDatePickerLocales().then(
+                _ => {
                     resolve(true);
                     abp.ui.clearBusy();
-                });
-            }, reject);
+                }
+            );
+        }, reject);
     } else {
-        NgxBootstrapDatePickerConfigService.registerNgxBootstrapDatePickerLocales().then(_ => {
-            resolve(true);
-            abp.ui.clearBusy();
-        });
+        NgxBootstrapDatePickerConfigService.registerNgxBootstrapDatePickerLocales().then(
+            _ => {
+                resolve(true);
+                abp.ui.clearBusy();
+            }
+        );
     }
 }
 
 export function shouldLoadLocale(): boolean {
-    return abp.localization.currentLanguage.name && abp.localization.currentLanguage.name !== 'en-US';
+    return (
+        abp.localization.currentLanguage.name &&
+        abp.localization.currentLanguage.name !== 'en-US'
+    );
 }
 
 export function convertAbpLocaleToAngularLocale(locale: string): string {
@@ -200,8 +258,8 @@ export function getCurrentLanguage(): string {
     return abp.localization.currentLanguage.name;
 }
 
-export function getBaseHref(CenterLocation: CenterLocation): string {
-    let baseUrl = CenterLocation.getBaseHrefFromDOM();
+export function getBaseHref(PlatformLocation: PlatformLocation): string {
+    let baseUrl = PlatformLocation.getBaseHrefFromDOM();
     if (baseUrl) {
         return baseUrl;
     }
@@ -212,7 +270,7 @@ export function getBaseHref(CenterLocation: CenterLocation): string {
 function handleLogoutRequest(authService: AppAuthService) {
     let currentUrl = UrlHelper.initialUrl;
     let returnUrl = UrlHelper.getReturnUrl();
-    if (currentUrl.indexOf(('account/logout')) >= 0 && returnUrl) {
+    if (currentUrl.indexOf('account/logout') >= 0 && returnUrl) {
         authService.logout(true, returnUrl);
     }
 }
@@ -228,15 +286,13 @@ function handleLogoutRequest(authService: AppAuthService) {
         HttpClientModule,
         RootRoutingModule
     ],
-    declarations: [
-        RootComponent
-    ],
+    declarations: [RootComponent],
     providers: [
         { provide: API_BASE_URL, useFactory: getRemoteServiceBaseUrl },
         {
             provide: APP_INITIALIZER,
             useFactory: appInitializerFactory,
-            deps: [Injector, CenterLocation],
+            deps: [Injector, PlatformLocation],
             multi: true
         },
         {
@@ -246,6 +302,4 @@ function handleLogoutRequest(authService: AppAuthService) {
     ],
     bootstrap: [RootComponent]
 })
-export class RootModule {
-
-}
+export class RootModule {}
